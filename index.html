@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Legal Network</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        #graph-svg {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            margin: 0;
+            color: #333;
+        }
+
+        .modal-content {
+            margin-bottom: 20px;
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        /* Debug styles */
+        .highlight-clickable {
+            stroke: #00ff00;
+            stroke-width: 2px;
+            stroke-opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <object id="graph-svg" type="image/svg+xml" data="Homepage.svg"></object>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title"></h2>
+        </div>
+        <div class="modal-content" id="modal-content"></div>
+    </div>
+
+    <script>
+        const elementInfo = {};
+
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').textContent = content;
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function shouldMakeClickable(element) {
+            // Skip elements in defs or definition elements first
+            if (element.closest('defs') || 
+                ['filter', 'pattern', 'linear', 'defs', 'style'].some(pattern => element.id?.includes(pattern))) {
+                return false;
+            }
+
+            // Function to check if a color is dark (black or dark grey)
+            function isDarkColor(color) {
+                if (!color || color === 'none') return false;
+                
+                // Check for named colors
+                if (color === 'black' || color === 'grey' || color === 'gray') return true;
+                
+                // Convert hex to RGB if it's a hex color
+                let r, g, b;
+                if (color.startsWith('#')) {
+                    // Handle both #RGB and #RRGGBB formats
+                    const hex = color.length === 4 ? 
+                        color.substring(1).split('').map(x => x + x).join('') : 
+                        color.substring(1);
+                    
+                    r = parseInt(hex.substr(0, 2), 16);
+                    g = parseInt(hex.substr(2, 2), 16);
+                    b = parseInt(hex.substr(4, 2), 16);
+                }
+                // Handle rgb/rgba format
+                else if (color.startsWith('rgb')) {
+                    const parts = color.match(/\d+/g);
+                    if (parts) {
+                        [r, g, b] = parts.map(Number);
+                    }
+                }
+
+                if (r !== undefined) {
+                    // Check if the color is dark (less than 50% brightness)
+                    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                    return brightness < 128;
+                }
+
+                return false;
+            }
+
+            // Function to check if element or any of its children have a dark stroke
+            function hasVisibleStroke(el) {
+                // Check the element itself
+                const stroke = el.getAttribute('stroke');
+                if (isDarkColor(stroke)) return true;
+
+                // Check stroke-width
+                const strokeWidth = el.getAttribute('stroke-width');
+                if (strokeWidth && parseFloat(strokeWidth) > 0) return true;
+
+                // Check all child elements
+                for (let child of el.children) {
+                    if (hasVisibleStroke(child)) return true;
+                }
+
+                return false;
+            }
+
+            // Function to check if element or any of its children have a non-white fill
+            function hasVisibleFill(el) {
+                const fill = el.getAttribute('fill');
+                if (fill && fill !== 'none' && fill !== '#FFFFFF' && fill !== '#fff' && fill !== 'white') {
+                    return true;
+                }
+
+                // Check all child elements
+                for (let child of el.children) {
+                    if (hasVisibleFill(child)) return true;
+                }
+
+                return false;
+            }
+
+            // Skip background rectangles
+            if (element.tagName === 'rect') {
+                const width = element.getAttribute('width');
+                const height = element.getAttribute('height');
+                // Skip if it's a large rectangle (likely background)
+                if (width > 1000 || height > 1000) {
+                    return false;
+                }
+            }
+
+            // Check if the element or its children have visible content
+            return hasVisibleFill(element) || hasVisibleStroke(element);
+        }
+
+        function makeElementsClickable(svgDoc) {
+            console.log('Making elements clickable...');
+            
+            if (!svgDoc) {
+                console.error('SVG document not found');
+                return;
+            }
+
+            // Add styles directly to the SVG document
+            const styleElement = svgDoc.createElementNS("http://www.w3.org/2000/svg", "style");
+            styleElement.textContent = `
+                [data-clickable="true"] {
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                [data-clickable="true"]:hover {
+                    opacity: 0.8;
+                    filter: brightness(1.2);
+                }
+                /* Add wider hit area for thin lines */
+                [data-clickable="true"][data-is-line="true"] {
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+                [data-clickable="true"][data-is-line="true"]::before {
+                    content: '';
+                    position: absolute;
+                    stroke: transparent;
+                    stroke-width: 10px;
+                    pointer-events: stroke;
+                    stroke-linecap: round;
+                    stroke-linejoin: round;
+                }
+            `;
+            svgDoc.documentElement.appendChild(styleElement);
+
+            // Define the elements we want to make clickable
+            const CLICKABLE_ELEMENTS = ['g', 'path', 'rect', 'circle', 'text', 'tspan', 'line'];
+            
+            let clickableCount = 0;
+
+            // Function to enhance line clickability
+            function enhanceLineClickability(element) {
+                // Create a wider invisible clone for better clicking
+                const clone = element.cloneNode(true);
+                clone.removeAttribute('id');
+                clone.setAttribute('stroke', 'transparent');
+                clone.setAttribute('stroke-width', '10');
+                clone.style.pointerEvents = 'stroke';
+                clone.style.cursor = 'pointer';
+                
+                // Insert clone before original element
+                element.parentNode.insertBefore(clone, element);
+                
+                // Link the clone's click events to the original element
+                clone.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    element.dispatchEvent(new Event('click'));
+                });
+            }
+
+            // Process each type of element we want to make clickable
+            CLICKABLE_ELEMENTS.forEach(elementType => {
+                const elements = svgDoc.getElementsByTagName(elementType);
+                console.log(`Found ${elements.length} ${elementType} elements`);
+
+                for (let element of elements) {
+                    if (!shouldMakeClickable(element)) {
+                        continue;
+                    }
+
+                    // For groups, make the group itself clickable
+                    const targetElement = element;
+                    
+                    if (!targetElement.hasAttribute('data-clickable')) {
+                        console.log(`Making element clickable:`, targetElement);
+                        clickableCount++;
+
+                        // Mark as processed
+                        targetElement.setAttribute('data-clickable', 'true');
+                        targetElement.style.cursor = 'pointer';
+
+                        // Check if this is a line or path that should have enhanced clickability
+                        const isLine = element.tagName === 'line' || 
+                                     (element.tagName === 'path' && element.getAttribute('stroke') && 
+                                      !element.getAttribute('fill'));
+                        
+                        if (isLine) {
+                            targetElement.setAttribute('data-is-line', 'true');
+                            enhanceLineClickability(targetElement);
+                        }
+                        
+                        // Add debug highlight
+                        targetElement.classList.add('highlight-clickable');
+
+                        // Add click event listener
+                        targetElement.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const info = elementInfo[targetElement.id] || {
+                                title: `Element: ${targetElement.id || elementType}`,
+                                content: `Type: ${elementType}\nID: ${targetElement.id || 'none'}`
+                            };
+                            showModal(info.title, info.content);
+                        });
+                    }
+                }
+            });
+
+            console.log(`Made ${clickableCount} elements clickable`);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            console.log('DOM Content Loaded');
+            const svgObject = document.getElementById("graph-svg");
+            
+            if (!svgObject) {
+                console.error('SVG object not found');
+                return;
+            }
+
+            svgObject.addEventListener("load", function () {
+                console.log('SVG loaded');
+                const svgDoc = svgObject.contentDocument;
+                
+                if (!svgDoc) {
+                    console.error('Could not access SVG document');
+                    return;
+                }
+
+                makeElementsClickable(svgDoc);
+            });
+
+            document.getElementById('modal-overlay').addEventListener('click', closeModal);
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
