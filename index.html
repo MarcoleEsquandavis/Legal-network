@@ -9,12 +9,27 @@
         body {
             margin: 0;
             padding: 0;
-            overflow: hidden;
-        }
-        
-        #graph-svg {
             width: 100vw;
             height: 100vh;
+            background: white;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #svg-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #graph-svg {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
 
         .modal {
@@ -83,7 +98,9 @@
     </style>
 </head>
 <body>
-    <object id="graph-svg" type="image/svg+xml" data="Homepage.svg"></object>
+    <div id="svg-container">
+        <iframe id="graph-svg" src="Homepage.svg"></iframe>
+    </div>
 
     <!-- Modal Overlay -->
     <div id="modal-overlay" class="modal-overlay"></div>
