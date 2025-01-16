@@ -217,23 +217,10 @@
                     cursor: pointer;
                     transition: all 0.2s ease;
                 }
-                [data-clickable="true"]:hover {
+                
+                [data-clickable="true"]:not([data-is-line="true"]):hover {
                     opacity: 0.8;
                     filter: brightness(1.2);
-                }
-                /* Add wider hit area for thin lines */
-                [data-clickable="true"][data-is-line="true"] {
-                    stroke-linecap: round;
-                    stroke-linejoin: round;
-                }
-                [data-clickable="true"][data-is-line="true"]::before {
-                    content: '';
-                    position: absolute;
-                    stroke: transparent;
-                    stroke-width: 10px;
-                    pointer-events: stroke;
-                    stroke-linecap: round;
-                    stroke-linejoin: round;
                 }
             `;
             svgDoc.documentElement.appendChild(styleElement);
@@ -245,6 +232,9 @@
 
             // Function to enhance line clickability
             function enhanceLineClickability(element) {
+                // Store the original stroke color
+                const originalStroke = element.getAttribute('stroke');
+                
                 // Create a wider invisible clone for better clicking
                 const clone = element.cloneNode(true);
                 clone.removeAttribute('id');
@@ -255,6 +245,24 @@
                 
                 // Insert clone before original element
                 element.parentNode.insertBefore(clone, element);
+                
+                // Add hover events to the clone that affect the original element
+                clone.addEventListener('mouseenter', () => {
+                    element.setAttribute('stroke', '#007bff');
+                });
+                
+                clone.addEventListener('mouseleave', () => {
+                    element.setAttribute('stroke', originalStroke);
+                });
+                
+                // Add hover events to the original element
+                element.addEventListener('mouseenter', () => {
+                    element.setAttribute('stroke', '#007bff');
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    element.setAttribute('stroke', originalStroke);
+                });
                 
                 // Link the clone's click events to the original element
                 clone.addEventListener('click', (e) => {
