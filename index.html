@@ -40,49 +40,101 @@
             transform: translate(-50%, -50%) scale(calc(1 / var(--zoom-factor, 1)));
             transform-origin: center center;
             background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             z-index: 1000;
-            width: 500px;
+            width: 800px;
             min-width: 300px;
             max-width: 90vw;
+            max-height: 80vh;
+            overflow: hidden;
         }
 
         .modal-header {
-            margin-bottom: 20px;
+            padding: 24px 32px;
+            border-bottom: none;
+            text-align: center;
+            position: relative;
         }
 
         .modal-title {
             font-size: 24px;
+            font-weight: 600;
             margin: 0;
-            color: #333;
-            white-space: normal;
-            word-wrap: break-word;
-        }
-
-        .modal-content {
-            margin-bottom: 20px;
-            line-height: 1.6;
-            color: #666;
-            font-size: 16px;
-            white-space: normal;
-            word-wrap: break-word;
+            color: #000;
+            padding-right: 40px;
         }
 
         .modal-close {
             position: absolute;
-            top: 15px;
-            right: 15px;
+            top: 24px;
+            right: 24px;
             background: none;
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: #999;
+            color: #000;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
 
         .modal-close:hover {
-            color: #333;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .modal-nav {
+            display: flex;
+            gap: 8px;
+            padding: 0 32px;
+            margin-bottom: 16px;
+        }
+
+        .modal-nav-button {
+            background: #E5F6F1;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 100px;
+            font-size: 16px;
+            color: #000;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .modal-nav-button:hover {
+            background: #D0F0E9;
+        }
+
+        .modal-nav-button.active {
+            background: #D0F0E9;
+        }
+
+        .modal-content {
+            padding: 0 32px 32px;
+            margin: 0;
+            color: #000;
+            font-size: 16px;
+            line-height: 1.5;
+            max-height: calc(80vh - 180px);
+            overflow-y: auto;
+        }
+
+        .modal-section {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .modal-section.active {
+            display: block;
+        }
+
+        .modal-section p {
+            margin: 0 0 16px;
         }
 
         .modal-overlay {
@@ -92,8 +144,23 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.3);
             z-index: 999;
+        }
+
+        /* Entity-specific styles */
+        .modal.entity-modal {
+            /* Add any entity-specific styles */
+        }
+
+        /* Contract-specific styles */
+        .modal.contract-modal {
+            /* Add any contract-specific styles */
+        }
+
+        /* Connection-specific styles */
+        .modal.connection-modal {
+            /* Add any connection-specific styles */
         }
 
         /* Debug styles */
@@ -109,26 +176,76 @@
         <iframe id="graph-svg" src="Homepage.svg"></iframe>
     </div>
 
-    <!-- Modal Overlay -->
-    <div id="modal-overlay" class="modal-overlay"></div>
-
     <!-- Modal -->
     <div id="modal" class="modal">
-        <button class="modal-close" onclick="closeModal()">×</button>
         <div class="modal-header">
             <h2 class="modal-title" id="modal-title"></h2>
+            <button class="modal-close" onclick="closeModal()">×</button>
         </div>
+        <div class="modal-nav" id="modal-nav"></div>
         <div class="modal-content" id="modal-content"></div>
     </div>
 
-    <script>
-        const elementInfo = {};
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay"></div>
 
-        function showModal(title, content) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-content').textContent = content;
+    <script src="network-content.js"></script>
+    <script>
+        function showModal(title, info, type = 'entity') {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalNav = document.getElementById('modal-nav');
+            const modalContent = document.getElementById('modal-content');
+
+            // Reset modal classes
+            modal.className = 'modal ' + type + '-modal';
+
+            // Set title
+            modalTitle.textContent = info.title || title;
+
+            // Create navigation buttons
+            modalNav.innerHTML = '';
+            let sections;
+            if (type === 'contract') {
+                sections = ['Summary', 'Sample Contract', 'Resources'];
+            } else if (type === 'connection') {
+                sections = ['Summary', 'Resources'];
+            } else {
+                sections = ['Summary', 'History', 'Resources'];
+            }
+
+            sections.forEach((section, index) => {
+                const button = document.createElement('button');
+                button.className = 'modal-nav-button' + (index === 0 ? ' active' : '');
+                button.textContent = section;
+                button.onclick = () => switchSection(section);
+                modalNav.appendChild(button);
+            });
+
+            // Create content sections
+            modalContent.innerHTML = sections.map(section => `
+                <div class="modal-section${section === 'Summary' ? ' active' : ''}" data-section="${section}">
+                    ${info.sections?.[section] || info.content || 'Content coming soon...'}
+                </div>
+            `).join('');
+
+            // Show modal
             document.getElementById('modal-overlay').style.display = 'block';
-            document.getElementById('modal').style.display = 'block';
+            modal.style.display = 'block';
+        }
+
+        function switchSection(sectionName) {
+            // Update button states
+            const buttons = document.querySelectorAll('.modal-nav-button');
+            buttons.forEach(button => {
+                button.classList.toggle('active', button.textContent === sectionName);
+            });
+
+            // Update section visibility
+            const sections = document.querySelectorAll('.modal-section');
+            sections.forEach(section => {
+                section.classList.toggle('active', section.dataset.section === sectionName);
+            });
         }
 
         function closeModal() {
@@ -338,11 +455,43 @@
                         // Add click event listener
                         targetElement.addEventListener('click', function(e) {
                             e.stopPropagation();
-                            const info = elementInfo[targetElement.id] || {
-                                title: `Element: ${targetElement.id || elementType}`,
-                                content: `Type: ${elementType}\nID: ${targetElement.id || 'none'}`
+                            const elementId = targetElement.id;
+                            
+                            // Determine the type of element
+                            const fill = targetElement.getAttribute('fill');
+                            const isContract = fill === '#A7E0D6' || // turquoise
+                                            fill === '#35147B' || // purple
+                                            fill === '#FFF3C9' || // yellow/beige
+                                            fill?.includes('url(#') || // gradient
+                                            fill === '#D0F0E9'; // alternate turquoise
+                            const isEntity = fill === '#F5F5F5'; // gray
+                            const isConnection = targetElement.tagName === 'line' || 
+                                              (targetElement.tagName === 'path' && targetElement.getAttribute('stroke') && 
+                                               !targetElement.getAttribute('fill'));
+                            
+                            let modalType = isContract ? 'contract' : (isConnection ? 'connection' : 'entity');
+                            let title = elementId;
+                            
+                            // Handle connection titles
+                            if (isConnection) {
+                                const sourceId = targetElement.getAttribute('data-source');
+                                const targetId = targetElement.getAttribute('data-target');
+                                if (sourceId && targetId) {
+                                    title = `Connection Between ${sourceId} and ${targetId}`;
+                                }
+                            }
+
+                            const info = networkContent[elementId] || {
+                                title: title,
+                                sections: {
+                                    Summary: 'Content for this element is coming soon...',
+                                    ...(modalType === 'contract' ? {'Sample Contract': 'Sample contract content coming soon...'} : {}),
+                                    ...(modalType === 'entity' ? {History: 'Historical information coming soon...'} : {}),
+                                    Resources: 'Resources coming soon...'
+                                }
                             };
-                            showModal(info.title, info.content);
+                            
+                            showModal(title, info, modalType);
                         });
                     }
                 }
