@@ -1,7 +1,8 @@
-// Network content object that holds all modal content
-const networkContent = {
+{
     "performing-rights-orgs": {
+        "id": "performing-rights-orgs",
         "title": "Performing Rights Organizations (PROs)",
+        "type": "entity",
         "sections": {
             "Summary": {
                 "overview": "Performing Rights Organizations (PROs) are entities that collect and distribute performance royalties on behalf of songwriters and music publishers. They serve as intermediaries between music creators and music users, ensuring proper compensation for public performances of musical works.",
@@ -94,4 +95,4 @@ const networkContent = {
             }
         }
     }
-}; 
+} 

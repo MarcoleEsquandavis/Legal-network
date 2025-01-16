@@ -1,0 +1,50 @@
+{
+    "distribution-agreement": {
+        "title": "Distribution & Licensing Agreements",
+        "sections": {
+            "Summary": {
+                "overview": "Distribution and licensing agreements govern how music is distributed and licensed across various platforms and uses.",
+                "key_points": [
+                    "Defines territory and platforms",
+                    "Sets revenue sharing terms",
+                    "Establishes distribution rights",
+                    "Details reporting requirements"
+                ]
+            },
+            "Sample Contract": {
+                "sections": [
+                    {
+                        "title": "1. Grant of Rights",
+                        "content": "Licensor hereby grants to Distributor the exclusive right to distribute, sell, and market the Content in the Territory through all Distribution Channels during the Term."
+                    },
+                    {
+                        "title": "2. Revenue Share",
+                        "content": "Distributor shall pay to Licensor seventy percent (70%) of Net Revenue received from the exploitation of the Content."
+                    }
+                ],
+                "notes": [
+                    "This is a simplified example",
+                    "Actual agreements are more detailed",
+                    "Terms vary by distributor and territory"
+                ]
+            },
+            "Resources": {
+                "related_links": [
+                    {
+                        "title": "Understanding Distribution Deals",
+                        "id": "distribution-guide"
+                    },
+                    {
+                        "title": "Revenue Calculations",
+                        "id": "revenue-calculations"
+                    }
+                ],
+                "external_resources": [
+                    "Industry standard rates",
+                    "Territory restrictions guide",
+                    "Platform requirements"
+                ]
+            }
+        }
+    }
+} 
